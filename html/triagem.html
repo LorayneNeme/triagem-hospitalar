@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Classificação de Risco - Triagem Hospitalar</title>
+
+    <!-- Bootstrap -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+
+    <!-- MENU LATERAL -->
+    <aside class="sidebar">
+
+        <div class="logo">
+
+            <div class="logo-icon">
+                <i class="bi bi-heart-pulse-fill"></i>
+            </div>
+
+            <div>
+                <h5>Triagem</h5>
+                <span>Hospitalar</span>
+            </div>
+
+        </div>
+
+        <nav class="menu">
+
+            <a href="index.html" class="menu-item">
+                <i class="bi bi-person-plus"></i>
+                <span>Cadastro</span>
+            </a>
+
+            <a href="fila-triagem.html" class="menu-item">
+                <i class="bi bi-list-check"></i>
+                <span>Triagem</span>
+            </a>
+
+            <a href="painel-paciente.html" class="menu-item">
+                <i class="bi bi-tv"></i>
+                <span>Painel do Paciente</span>
+            </a>
+
+            <a href="dashboard.html" class="menu-item">
+                <i class="bi bi-people"></i>
+                <span>Equipe</span>
+            </a>
+
+        </nav>
+
+        <div class="sidebar-footer">
+            <i class="bi bi-heart"></i>
+
+            <p>
+                Cuidando de vidas,<br>
+                com organização e respeito.
+            </p>
+        </div>
+
+    </aside>
+
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="main-content">
+
+        <!-- CABEÇALHO -->
+        <header class="topbar">
+
+            <div>
+
+                <h6>Classificação de Risco</h6>
+
+                <p>
+                    Selecione o nível de prioridade do paciente conforme os sinais e sintomas apresentados.
+                </p>
+
+            </div>
+
+            <div class="date">
+
+                <i class="bi bi-calendar3"></i>
+
+                <span id="dataAtual"></span>
+
+            </div>
+
+        </header>
+
+
+        <!-- ÁREA PRINCIPAL -->
+        <section class="content-area">
+
+            <div class="card cadastro-card">
+
+                <div class="card-body">
+
+                    <!-- TÍTULO -->
+                    <div class="section-title">
+
+                        <div class="title-icon">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                        </div>
+
+                        <div>
+
+                            <h2>Classificação de Risco</h2>
+
+                            <p>
+                                Selecione o nível de prioridade do paciente conforme os sinais e sintomas apresentados.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- NÍVEIS DE RISCO -->
+                    <div class="risk-grid">
+
+                        <button
+                            type="button"
+                            class="risk-card risk-red"
+                            data-priority="Vermelho">
+
+                            <div class="risk-icon">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                            </div>
+
+                            <h4>Vermelho</h4>
+
+                            <p>Emergência</p>
+
+                            <small>Atendimento imediato</small>
+
+                            <div class="risk-radio">
+                                <i class="bi bi-circle"></i>
+                            </div>
+
+                        </button>
+
+
+                        <button
+                            type="button"
+                            class="risk-card risk-orange"
+                            data-priority="Laranja">
+
+                            <div class="risk-icon">
+                                <i class="bi bi-exclamation-circle-fill"></i>
+                            </div>
+
+                            <h4>Laranja</h4>
+
+                            <p>Muito urgente</p>
+
+                            <small>Atendimento prioritário</small>
+
+                            <div class="risk-radio">
+                                <i class="bi bi-circle"></i>
+                            </div>
+
+                        </button>
+
+
+                        <button
+                            type="button"
+                            class="risk-card risk-yellow"
+                            data-priority="Amarelo">
+
+                            <div class="risk-icon">
+                                <i class="bi bi-exclamation-circle-fill"></i>
+                            </div>
+
+                            <h4>Amarelo</h4>
+
+                            <p>Urgente</p>
+
+                            <small>Necessita avaliação</small>
+
+                            <div class="risk-radio">
+                                <i class="bi bi-circle"></i>
+                            </div>
+
+                        </button>
+
+
+                        <button
+                            type="button"
+                            class="risk-card risk-green"
+                            data-priority="Verde">
+
+                            <div class="risk-icon">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </div>
+
+                            <h4>Verde</h4>
+
+                            <p>Pouco urgente</p>
+
+                            <small>Atendimento sem urgência</small>
+
+                            <div class="risk-radio">
+                                <i class="bi bi-circle"></i>
+                            </div>
+
+                        </button>
+
+
+                        <button
+                            type="button"
+                            class="risk-card risk-blue"
+                            data-priority="Azul">
+
+                            <div class="risk-icon">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </div>
+
+                            <h4>Azul</h4>
+
+                            <p>Não urgente</p>
+
+                            <small>Atendimento conforme disponibilidade</small>
+
+                            <div class="risk-radio">
+                                <i class="bi bi-circle"></i>
+                            </div>
+
+                        </button>
+
+                    </div>
+
+
+                    <!-- ESPECIALIDADE, SALA E OBSERVAÇÃO -->
+                    <div class="row mt-4">
+
+                        <!-- ESPECIALIDADE -->
+                        <div class="col-md-4">
+
+                            <label for="especialidade" class="form-label">
+                                Especialidade
+                            </label>
+
+                            <select
+                                id="especialidade"
+                                class="form-select">
+
+                                <option value="">
+                                    Selecione a especialidade
+                                </option>
+
+                                <option value="Clínico Geral">
+                                    Clínico Geral
+                                </option>
+
+                                <option value="Pediatria">
+                                    Pediatria
+                                </option>
+
+                                <option value="Odontologia">
+                                    Odontologia
+                                </option>
+
+                                <option value="Ortopedia">
+                                    Ortopedia
+                                </option>
+
+                                <option value="Cardiologia">
+                                    Cardiologia
+                                </option>
+
+                                <option value="Ginecologia">
+                                    Ginecologia
+                                </option>
+
+                                <option value="Outro">
+                                    Outro
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- SALA -->
+                        <div class="col-md-4">
+
+                            <label for="sala" class="form-label">
+                                Sala
+                            </label>
+
+                            <select
+                                id="sala"
+                                class="form-select">
+
+                                <option value="">
+                                    Selecione a sala
+                                </option>
+
+                                <option value="Sala 01">
+                                    Sala 01
+                                </option>
+
+                                <option value="Sala 02">
+                                    Sala 02
+                                </option>
+
+                                <option value="Sala 03">
+                                    Sala 03
+                                </option>
+
+                                <option value="Sala 04">
+                                    Sala 04
+                                </option>
+
+                                <option value="Sala 05">
+                                    Sala 05
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- OBSERVAÇÃO -->
+                        <div class="col-md-4">
+
+                            <label for="observacao" class="form-label">
+                                Observação
+                            </label>
+
+                            <textarea
+                                id="observacao"
+                                class="form-control"
+                                rows="3"
+                                placeholder="Digite uma observação, se necessário..."></textarea>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- AVISO -->
+                <div class="info-box mt-4">
+
+                    <i class="bi bi-info-circle"></i>
+
+                    <span>
+                        Após a classificação, o paciente será adicionado à fila de atendimento.
+                    </span>
+
+                </div>
+
+
+                <!-- BOTÕES -->
+                <div class="button-area">
+
+                    <a
+                        href="fila-triagem.html"
+                        class="btn btn-outline-primary">
+
+                        <i class="bi bi-arrow-left"></i>
+
+                        Voltar
+
+                    </a>
+
+
+                    <button
+                        type="button"
+                        id="btnConfirmar"
+                        class="btn btn-primary"
+                        disabled>
+
+                        <i class="bi bi-check-lg"></i>
+
+                        Confirmar classificação
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- Bootstrap JS -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+    </script>
+
+
+    <!-- JavaScript do projeto -->
+    <script src="../js/script.js"></script>
+
+</body>
+
+</html>

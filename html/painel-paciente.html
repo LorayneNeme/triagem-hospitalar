@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Painel do Paciente</title>
+
+    <!-- Bootstrap -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/style.css">
+
+</head>
+
+<body>
+
+    <!-- MENU LATERAL -->
+    <aside class="sidebar">
+
+        <div class="logo">
+
+            <div class="logo-icon">
+                <i class="bi bi-heart-pulse-fill"></i>
+            </div>
+
+            <div>
+                <h5>Triagem</h5>
+                <span>Sistema hospitalar</span>
+            </div>
+
+        </div>
+
+        <nav class="menu">
+
+            <a href="index.html" class="menu-item">
+                <i class="bi bi-person-plus"></i>
+                <span>Cadastro</span>
+            </a>
+
+            <a href="fila-triagem.html" class="menu-item">
+                <i class="bi bi-list-ul"></i>
+                <span>Triagem</span>
+            </a>
+
+            <a href="painel-paciente.html" class="menu-item active">
+                <i class="bi bi-tv"></i>
+                <span>Painel do Paciente</span>
+            </a>
+
+            <a href="dashboard.html" class="menu-item">
+                <i class="bi bi-bar-chart"></i>
+                <span>Equipe</span>
+            </a>
+
+        </nav>
+
+        <div class="sidebar-footer">
+
+            <i class="bi bi-shield-check"></i>
+
+            <p>
+                Sistema de atendimento
+            </p>
+
+        </div>
+
+    </aside>
+
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="main-content">
+
+        <header class="page-header">
+
+            <div class="page-header-text">
+
+                <h1>Painel do Paciente</h1>
+
+                <p>
+                    Tela de chamadas para triagem e atendimento.
+                </p>
+
+            </div>
+
+            <div class="date">
+
+                <i class="bi bi-calendar3"></i>
+
+                <span id="dataAtual"></span>
+
+            </div>
+
+        </header>
+
+
+        <!-- ÁREA DO PAINEL -->
+        <section class="painel-content">
+
+
+            <!-- CONTROLE DE CHAMADAS -->
+            <div class="painel-controle">
+
+                <div class="controle-titulo">
+
+                    <h2>Controle de chamadas</h2>
+
+                    <p>
+                        Selecione o tipo de atendimento e realize a chamada.
+                    </p>
+
+                </div>
+
+
+                <div class="painel-tipos">
+
+                    <button
+                        type="button"
+                        class="tipo-chamada ativo"
+                        id="btnTriagem">
+
+                        <i class="bi bi-clipboard2-pulse"></i>
+
+                        Chamada para triagem
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="tipo-chamada"
+                        id="btnConsulta">
+
+                        <i class="bi bi-hospital"></i>
+
+                        Chamada para consulta
+
+                    </button>
+
+                </div>
+
+
+                <div class="painel-acoes">
+
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        id="btnChamar">
+
+                        <i class="bi bi-megaphone-fill"></i>
+
+                        Chamar próximo
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="btn btn-outline-primary"
+                        id="btnRechamar">
+
+                        <i class="bi bi-arrow-repeat"></i>
+
+                        Rechamar
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- TELA DO PAINEL -->
+            <div class="painel-tv" id="painelTv">
+
+
+                <div class="painel-tv-topo">
+
+                    <div class="painel-logo">
+
+                        <i class="bi bi-heart-pulse-fill"></i>
+
+                        <span>ATENDIMENTO</span>
+
+                    </div>
+
+
+                    <div class="painel-tv-data">
+
+                        <i class="bi bi-calendar3"></i>
+
+                        <span id="dataPainel"></span>
+
+                    </div>
+
+
+                    <button
+                        type="button"
+                        class="btn-tela-cheia"
+                        id="btnTelaCheia"
+                        title="Aumentar tela">
+
+                        <i class="bi bi-arrows-fullscreen"></i>
+
+                    </button>
+
+                </div>
+
+
+                <div class="painel-chamada">
+
+                    <div
+                        class="painel-status"
+                        id="textoStatus">
+
+                        Aguardando chamada
+
+                    </div>
+
+
+                    <div
+                        class="painel-senha"
+                        id="senhaAtual">
+
+                        ---
+
+                    </div>
+
+
+                    <div
+                        class="painel-nome"
+                        id="nomeAtual">
+
+                        Aguardando próximo paciente
+
+                    </div>
+
+
+                    <div
+                        class="painel-destino"
+                        id="destinoAtual">
+
+                        ---
+
+                    </div>
+
+
+                    <div class="painel-mensagem">
+
+                        <i class="bi bi-info-circle"></i>
+
+                        <span>
+                            Aguarde a chamada e dirija-se ao local indicado.
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div class="painel-tv-rodape">
+
+                    <span>
+                        Por favor, aguarde sua chamada.
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <!-- INFORMAÇÃO DE PRIVACIDADE -->
+            <div class="painel-info">
+
+                <i class="bi bi-shield-check"></i>
+
+                <div>
+
+                    <strong>
+                        Privacidade do paciente
+                    </strong>
+
+                    <p>
+                        O painel exibe somente o nome, a senha e o destino
+                        do atendimento. Nenhuma informação clínica ou dado
+                        sensível é exibido na tela pública.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+        </section>
+
+    </main>
+
+
+    <!-- JavaScript principal -->
+    <script src="../js/script.js"></script>
+
+
+    <!-- JavaScript do painel -->
+    <script>
+
+    (function() {
+
+        let tipoChamadaPainel = "triagem";
+
+        let pacienteChamado = null;
+
+
+        const btnTriagem =
+            document.getElementById("btnTriagem");
+
+        const btnConsulta =
+            document.getElementById("btnConsulta");
+
+        const btnChamar =
+            document.getElementById("btnChamar");
+
+        const btnRechamar =
+            document.getElementById("btnRechamar");
+
+        const btnTelaCheia =
+            document.getElementById("btnTelaCheia");
+
+        const painelTv =
+            document.getElementById("painelTv");
+
+
+        // Seleciona triagem
+
+        if (btnTriagem) {
+
+            btnTriagem.addEventListener("click", function() {
+
+                tipoChamadaPainel = "triagem";
+
+                btnTriagem.classList.add("ativo");
+
+                btnConsulta.classList.remove("ativo");
+
+            });
+
+        }
+
+
+        // Seleciona consulta
+
+        if (btnConsulta) {
+
+            btnConsulta.addEventListener("click", function() {
+
+                tipoChamadaPainel = "consulta";
+
+                btnConsulta.classList.add("ativo");
+
+                btnTriagem.classList.remove("ativo");
+
+            });
+
+        }
+
+
+        // Chama o próximo paciente
+
+        if (btnChamar) {
+
+            btnChamar.addEventListener("click", function() {
+
+                const pacientes =
+                    JSON.parse(
+                        localStorage.getItem("pacientes")
+                    ) || [];
+
+
+                let paciente = null;
+
+
+                // Chamada para triagem
+
+                if (tipoChamadaPainel === "triagem") {
+
+                    const pacientesTriagem =
+                        pacientes
+                            .filter(function(p) {
+
+                                return p.status === "Aguardando triagem";
+
+                            })
+                            .sort(function(a, b) {
+
+                                return new Date(a.horarioChegada) -
+                                    new Date(b.horarioChegada);
+
+                            });
+
+
+                    if (pacientesTriagem.length > 0) {
+
+                        paciente = pacientesTriagem[0];
+
+                    }
+
+                }
+
+
+                // Chamada para consulta
+
+                else {
+
+                    const ordemPrioridade = [
+                        "Vermelho",
+                        "Laranja",
+                        "Amarelo",
+                        "Verde",
+                        "Azul"
+                    ];
+
+
+                    const pacientesConsulta =
+                        pacientes
+                            .filter(function(p) {
+
+                                return p.status === "Aguardando atendimento";
+
+                            })
+                            .sort(function(a, b) {
+
+                                const prioridadeA =
+                                    ordemPrioridade.indexOf(
+                                        a.prioridade
+                                    );
+
+                                const prioridadeB =
+                                    ordemPrioridade.indexOf(
+                                        b.prioridade
+                                    );
+
+
+                                if (
+                                    prioridadeA !== prioridadeB
+                                ) {
+
+                                    return prioridadeA -
+                                        prioridadeB;
+
+                                }
+
+
+                                return new Date(a.horarioTriagem) -
+                                    new Date(b.horarioTriagem);
+
+                            });
+
+
+                    if (pacientesConsulta.length > 0) {
+
+                        paciente = pacientesConsulta[0];
+
+                    }
+
+                }
+
+
+                // Verifica se existe paciente
+
+                if (!paciente) {
+
+                    if (
+                        tipoChamadaPainel === "triagem"
+                    ) {
+
+                        alert(
+                            "Não há pacientes aguardando triagem."
+                        );
+
+                    } else {
+
+                        alert(
+                            "Não há pacientes aguardando atendimento."
+                        );
+
+                    }
+
+                    return;
+
+                }
+
+
+                // Guarda o paciente chamado
+
+                pacienteChamado = paciente;
+
+
+                // Se for consulta,
+                // tira o paciente da fila
+
+                if (
+                    tipoChamadaPainel === "consulta"
+                ) {
+
+                    const indice =
+                        pacientes.findIndex(function(p) {
+
+                            return p.codigo === paciente.codigo;
+
+                        });
+
+
+                    if (indice !== -1) {
+
+                        pacientes[indice].status =
+                            "Em atendimento";
+
+
+                        localStorage.setItem(
+                            "pacientes",
+                            JSON.stringify(pacientes)
+                        );
+
+                    }
+
+                }
+
+
+                // Mostra o paciente
+
+                mostrarPacientePainel(paciente);
+
+
+                // Faz a chamada por voz
+
+                falarChamada(paciente);
+
+            });
+
+        }
+
+
+        // Rechama o último paciente
+
+        if (btnRechamar) {
+
+            btnRechamar.addEventListener("click", function() {
+
+                if (!pacienteChamado) {
+
+                    alert(
+                        "Nenhum paciente foi chamado ainda."
+                    );
+
+                    return;
+
+                }
+
+
+                mostrarPacientePainel(
+                    pacienteChamado
+                );
+
+
+                falarChamada(
+                    pacienteChamado
+                );
+
+            });
+
+        }
+
+
+        // Mostra o paciente no painel
+
+        function mostrarPacientePainel(paciente) {
+
+            const textoStatus =
+                document.getElementById(
+                    "textoStatus"
+                );
+
+
+            const senhaAtual =
+                document.getElementById(
+                    "senhaAtual"
+                );
+
+
+            const nomeAtual =
+                document.getElementById(
+                    "nomeAtual"
+                );
+
+
+            const destinoAtual =
+                document.getElementById(
+                    "destinoAtual"
+                );
+
+
+            if (
+                tipoChamadaPainel === "triagem"
+            ) {
+
+                textoStatus.textContent =
+                    "PACIENTE CHAMADO PARA TRIAGEM";
+
+
+                destinoAtual.textContent =
+                    "TRIAGEM";
+
+            }
+
+
+            else {
+
+                textoStatus.textContent =
+                    "PACIENTE CHAMADO PARA CONSULTA";
+
+
+                if (paciente.sala) {
+
+                    destinoAtual.textContent =
+                        paciente.sala +
+                        " — " +
+                        (
+                            paciente.especialidade ||
+                            "CONSULTA"
+                        );
+
+                }
+
+                else {
+
+                    destinoAtual.textContent =
+                        paciente.especialidade ||
+                        "CONSULTA";
+
+                }
+
+            }
+
+
+            senhaAtual.textContent =
+                paciente.codigo;
+
+
+            nomeAtual.textContent =
+                paciente.nome;
+
+
+            painelTv.classList.remove(
+                "chamada-animada"
+            );
+
+
+            void painelTv.offsetWidth;
+
+
+            painelTv.classList.add(
+                "chamada-animada"
+            );
+
+        }
+
+
+        // Faz a chamada por voz
+
+        function falarChamada(paciente) {
+
+            if (
+                !("speechSynthesis" in window)
+            ) {
+
+                return;
+
+            }
+
+
+            window.speechSynthesis.cancel();
+
+
+            let mensagem;
+
+
+            if (
+                tipoChamadaPainel === "triagem"
+            ) {
+
+                mensagem =
+                    "Senha " +
+                    paciente.codigo +
+                    ". " +
+                    paciente.nome +
+                    ". Dirija-se à triagem.";
+
+            }
+
+
+            else {
+
+                mensagem =
+                    "Senha " +
+                    paciente.codigo +
+                    ". " +
+                    paciente.nome +
+                    ". Dirija-se para " +
+                    (
+                        paciente.sala ||
+                        paciente.especialidade ||
+                        "a consulta"
+                    ) +
+                    ".";
+
+            }
+
+
+            const fala =
+                new SpeechSynthesisUtterance(
+                    mensagem
+                );
+
+
+            fala.lang = "pt-BR";
+
+            fala.rate = 0.9;
+
+            fala.pitch = 1;
+
+
+            window.speechSynthesis.speak(
+                fala
+            );
+
+        }
+
+
+        // Atualiza a data
+
+        function atualizarDataPainel() {
+
+            const agora =
+                new Date();
+
+
+            const opcoes = {
+
+                day: "2-digit",
+
+                month: "long",
+
+                year: "numeric"
+
+            };
+
+
+            const data =
+                agora.toLocaleDateString(
+                    "pt-BR",
+                    opcoes
+                );
+
+
+            const dataAtual =
+                document.getElementById(
+                    "dataAtual"
+                );
+
+
+            const dataPainel =
+                document.getElementById(
+                    "dataPainel"
+                );
+
+
+            if (dataAtual) {
+
+                dataAtual.textContent =
+                    data;
+
+            }
+
+
+            if (dataPainel) {
+
+                dataPainel.textContent =
+                    data;
+
+            }
+
+        }
+
+
+        atualizarDataPainel();
+
+
+    })();
+
+    </script>
+
+</body>
+
+</html>
