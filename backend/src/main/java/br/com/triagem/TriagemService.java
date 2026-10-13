@@ -1,7 +1,9 @@
 package br.com.triagem;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -128,5 +130,40 @@ public class TriagemService {
 
     public int quantidadeAguardando() {
         return fila.tamanho();
+    }
+
+    public EstatisticasFila gerarEstatisticas() {
+        Map<Prioridade, Integer> porCor = new EnumMap<>(Prioridade.class);
+
+        for (Prioridade prioridade : Prioridade.values()) {
+            porCor.put(prioridade, 0);
+        }
+
+        for (Paciente paciente : pacientesPorCodigo.values()) {
+            porCor.merge(paciente.getPrioridade(), 1, Integer::sum);
+        }
+
+        Duration soma = Duration.ZERO;
+        Duration maior = Duration.ZERO;
+
+        for (Paciente paciente : atendidos) {
+            Duration espera = paciente.getTempoEspera();
+            soma = soma.plus(espera);
+
+            if (espera.compareTo(maior) > 0) {
+                maior = espera;
+            }
+        }
+
+        Duration media = atendidos.isEmpty() ? Duration.ZERO : soma.dividedBy(atendidos.size());
+
+        return new EstatisticasFila(
+                pacientesPorCodigo.size(),
+                fila.tamanho(),
+                atendidos.size(),
+                porCor,
+                media,
+                maior
+        );
     }
 }
