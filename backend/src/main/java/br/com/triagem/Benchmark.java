@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
@@ -14,8 +15,9 @@ import java.util.function.Supplier;
 /**
  * Mede as três estruturas de FilaAtendimento com 100 a 1.000.000 de pacientes
  * em quatro cenários e grava o resultado em resultados/benchmark.csv.
+ * Cada combinação é medida 5 vezes e o CSV guarda a mediana.
  *
- * Executar: java -cp target/classes br.com.triagem.Benchmark
+ * Executar: java -Xms2g -Xmx2g -cp target/classes br.com.triagem.Benchmark
  */
 public class Benchmark {
 
@@ -36,6 +38,7 @@ public class Benchmark {
     private static final int CONSULTAS = 1_000;
     private static final int MAX_ALTERACOES = 1_000;
     private static final long SEMENTE = 42L;
+    private static final int REPETICOES = 5;
     private static final LocalDateTime INICIO = LocalDateTime.of(2026, 10, 13, 8, 0);
     private static final Path ARQUIVO_CSV = Path.of("resultados", "benchmark.csv");
 
@@ -94,6 +97,47 @@ public class Benchmark {
                 alteracaoMs, remocaoMs, totalMs, pacientesPorSegundo);
     }
 
+    /**
+     * Repete a medição com filas novas e devolve a mediana de cada tempo.
+     * Uma medição só sofre com pausas do coletor de lixo; a mediana descarta esses picos.
+     */
+    public static Resultado medirMediana(Supplier<FilaAtendimento> estrutura, Cenario cenario, int n,
+                                         long semente, int repeticoes) {
+        double[] insercao = new double[repeticoes];
+        double[] consulta = new double[repeticoes];
+        double[] alteracao = new double[repeticoes];
+        double[] remocao = new double[repeticoes];
+        String nome = null;
+
+        for (int i = 0; i < repeticoes; i++) {
+            System.gc(); // começa cada repetição sem o lixo da anterior
+            Resultado r = medir(estrutura.get(), cenario, n, semente);
+            nome = r.estrutura();
+            insercao[i] = r.insercaoMs();
+            consulta[i] = r.consultaNs();
+            alteracao[i] = r.alteracaoMs();
+            remocao[i] = r.remocaoMs();
+        }
+
+        double insercaoMs = mediana(insercao);
+        double alteracaoMs = mediana(alteracao);
+        double remocaoMs = mediana(remocao);
+        double totalMs = insercaoMs + alteracaoMs + remocaoMs;
+
+        return new Resultado(nome, cenario, n, insercaoMs, mediana(consulta),
+                alteracaoMs, remocaoMs, totalMs, n / (totalMs / 1000.0));
+    }
+
+    static double mediana(double[] valores) {
+        double[] ordenados = valores.clone();
+        Arrays.sort(ordenados);
+        int meio = ordenados.length / 2;
+
+        return ordenados.length % 2 == 1
+                ? ordenados[meio]
+                : (ordenados[meio - 1] + ordenados[meio]) / 2;
+    }
+
     public static void main(String[] args) throws IOException {
         List<Supplier<FilaAtendimento>> estruturas = List.of(FilaHeap::new, FilaArvore::new, FilaListaOrdenada::new);
 
@@ -119,7 +163,7 @@ public class Benchmark {
                         continue;
                     }
 
-                    Resultado r = medir(fila, cenario, n, SEMENTE);
+                    Resultado r = medirMediana(estrutura, cenario, n, SEMENTE, REPETICOES);
 
                     System.out.printf(Locale.ROOT, "%-28s %-17s %10d %12.2f %12.1f %13.2f %12.2f %12.2f %16.0f%n",
                             r.estrutura(), r.cenario(), r.n(), r.insercaoMs(), r.consultaNs(),
