@@ -50,10 +50,11 @@ public class Main {
         int codigo = lerInteiro("Código: ");
         System.out.print("Nome: ");
         String nome = scanner.nextLine();
+        int idade = lerInteiro("Idade: ");
         mostrarPrioridades();
         int prioridade = lerInteiro("Prioridade (1 a 5): ");
 
-        Paciente paciente = triagem.cadastrarPaciente(codigo, nome, prioridade);
+        Paciente paciente = triagem.cadastrarPaciente(codigo, nome, idade, prioridade);
         System.out.println("Paciente cadastrado: " + paciente);
     }
 

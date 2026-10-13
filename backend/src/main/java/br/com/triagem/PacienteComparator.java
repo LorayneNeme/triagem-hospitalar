@@ -14,6 +14,13 @@ public class PacienteComparator implements Comparator<Paciente> {
             return porPrioridade;
         }
 
-        return a.getHorarioChegada().compareTo(b.getHorarioChegada());
+        int porHorario = a.getHorarioChegada().compareTo(b.getHorarioChegada());
+
+        if (porHorario != 0) {
+            return porHorario;
+        }
+
+        // Dois cadastros podem ter o mesmo horário; a ordem de chegada desempata.
+        return Long.compare(a.getOrdemChegada(), b.getOrdemChegada());
     }
 }
