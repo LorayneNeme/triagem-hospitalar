@@ -117,7 +117,35 @@ Pontos levantados na revisão do código que ainda não foram resolvidos.
   tempo de espera).
 - [ ] Alterar prioridade não mostra a prioridade atual antes da nova (spec 4.5).
 
-### Fora do backend
+### Integração com o site
 
-- [ ] Ligar o backend ao site (API HTTP). O site tem duas filas (triagem por ordem de chegada e
-  consulta por prioridade) e o backend tem uma; o grupo precisa decidir como unir os dois.
+O site (`js/script.js`) e o backend modelam o caminho do paciente de formas diferentes:
+
+```
+SITE:     Recepção ──► Fila 1: TRIAGEM ──────────► Classificação ──► Fila 2: CONSULTA ──────► Médico
+          (sem cor)    ordem de chegada (FIFO)     (cor, sala...)    prioridade + hora da triagem
+
+BACKEND:  Cadastro já com a cor ─────────────────────────────────► Fila de prioridade ────► Atendimento
+                                                                   prioridade + hora de chegada
+```
+
+- [ ] **Adicionar a fila de triagem no backend.** Hoje o cadastro já exige a cor e o paciente entra
+  direto na fila de prioridade; a etapa "chegou e aguarda classificação" não existe. Proposta:
+  - cadastro sem prioridade, colocando o paciente numa fila FIFO (`ArrayDeque<Paciente>`) com status
+    "Aguardando triagem";
+  - operação `chamarParaTriagem()` (remove o primeiro da FIFO);
+  - operação `classificar(codigo, prioridade, ...)` que define a cor e insere na `FilaAtendimento`
+    com status "Aguardando atendimento";
+  - o `chamarProximo()` atual continua sendo a chamada para consulta ("Em atendimento").
+- [ ] **Alinhar o critério de desempate.** O site desempata a fila de consulta pela **hora da triagem**
+  (`horarioTriagem`); o backend desempata pela **hora de chegada** (`horarioChegada`). O grupo precisa
+  escolher um. O documento da A3 (seção 4.3) fala em horário de chegada.
+- [ ] **Alinhar os dados do paciente.** O site guarda campos que o backend não tem: telefone, endereço,
+  queixa, especialidade, sala, observação e horário da triagem.
+- [ ] **Alinhar os status.** Site: "Aguardando triagem", "Aguardando atendimento", "Em atendimento".
+  Backend: "Aguardando", "Em atendimento".
+- [ ] **Alinhar o código do paciente.** Site: senha sorteada `A123` (pode repetir). Backend: número
+  informado no cadastro, exibido como `P001`.
+- [ ] **Ligar os dois.** Expor o `TriagemService` como API HTTP e trocar o `localStorage` do
+  `script.js` por chamadas a ela. Hoje cada navegador tem a sua própria fila: a recepção, a triagem e
+  o painel da TV não enxergam os mesmos dados.
