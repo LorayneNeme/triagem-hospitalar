@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.function.Supplier;
 
 public class TriagemService {
     private final PriorityQueue<Paciente> fila =
@@ -13,7 +14,23 @@ public class TriagemService {
 
     private final Map<Integer, Paciente> pacientesPorCodigo = new HashMap<>();
 
-    public Paciente cadastrarPaciente(int codigo, String nome, int nivelPrioridade) {
+    private final Supplier<LocalDateTime> relogio;
+
+    private long proximaOrdem = 0;
+
+    public TriagemService() {
+        this(LocalDateTime::now);
+    }
+
+    public TriagemService(Supplier<LocalDateTime> relogio) {
+        this.relogio = relogio;
+    }
+
+    public Paciente cadastrarPaciente(int codigo, String nome, int idade, int nivelPrioridade) {
+        if (codigo <= 0) {
+            throw new IllegalArgumentException("O código deve ser maior que zero.");
+        }
+
         if (pacientesPorCodigo.containsKey(codigo)) {
             throw new IllegalArgumentException("Já existe paciente com o código " + codigo + ".");
         }
@@ -22,11 +39,19 @@ public class TriagemService {
             throw new IllegalArgumentException("O nome do paciente é obrigatório.");
         }
 
+        if (idade < 0 || idade > 130) {
+            throw new IllegalArgumentException("A idade deve estar entre 0 e 130.");
+        }
+
+        Prioridade prioridade = Prioridade.porNivel(nivelPrioridade);
+
         Paciente paciente = new Paciente(
                 codigo,
                 nome.trim(),
-                Prioridade.porNivel(nivelPrioridade),
-                LocalDateTime.now()
+                idade,
+                prioridade,
+                relogio.get(),
+                proximaOrdem++
         );
 
         fila.add(paciente);
