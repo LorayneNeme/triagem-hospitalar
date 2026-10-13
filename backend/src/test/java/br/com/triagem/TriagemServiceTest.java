@@ -1,10 +1,13 @@
 package br.com.triagem;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -31,6 +34,24 @@ class TriagemServiceTest {
         assertTrue(s.alterarPrioridade(3, 2));
         assertEquals("João", s.listarFilaOrdenada().get(0).getNome());
         assertFalse(s.alterarPrioridade(99, 1));
+    }
+
+    static Stream<FilaAtendimento> filas() {
+        return Stream.of(new FilaHeap(), new FilaArvore(), new FilaListaOrdenada());
+    }
+
+    @ParameterizedTest
+    @MethodSource("filas")
+    void cenarioDaEntrega3ComCadaEstrutura(FilaAtendimento fila) {
+        TriagemService s = new TriagemService(fila, LocalDateTime::now);
+        s.cadastrarPaciente(1, "Carlos", 40, 3);
+        s.cadastrarPaciente(2, "Ana", 40, 1);
+        s.cadastrarPaciente(3, "João", 40, 3);
+
+        assertEquals("Ana", s.chamarProximo().getNome());
+        assertEquals(List.of(1, 3), codigos(s.listarFilaOrdenada()));
+        assertTrue(s.alterarPrioridade(3, 2));
+        assertEquals(List.of(3, 1), codigos(s.listarFilaOrdenada()));
     }
 
     @Test

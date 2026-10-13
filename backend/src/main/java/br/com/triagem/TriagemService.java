@@ -5,12 +5,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
 import java.util.function.Supplier;
 
 public class TriagemService {
-    private final PriorityQueue<Paciente> fila =
-            new PriorityQueue<>(new PacienteComparator());
+    private final FilaAtendimento fila;
 
     private final Map<Integer, Paciente> pacientesPorCodigo = new HashMap<>();
 
@@ -25,6 +23,11 @@ public class TriagemService {
     }
 
     public TriagemService(Supplier<LocalDateTime> relogio) {
+        this(new FilaHeap(), relogio);
+    }
+
+    public TriagemService(FilaAtendimento fila, Supplier<LocalDateTime> relogio) {
+        this.fila = fila;
         this.relogio = relogio;
     }
 
@@ -56,17 +59,17 @@ public class TriagemService {
                 proximaOrdem++
         );
 
-        fila.add(paciente);
+        fila.inserir(paciente);
         pacientesPorCodigo.put(codigo, paciente);
         return paciente;
     }
 
     public Paciente consultarProximo() {
-        return fila.peek();
+        return fila.consultarPrimeiro();
     }
 
     public Paciente chamarProximo() {
-        Paciente paciente = fila.poll();
+        Paciente paciente = fila.removerPrimeiro();
 
         if (paciente != null) {
             // Continua no HashMap: a busca e as estatísticas precisam de quem já foi atendido.
@@ -84,7 +87,7 @@ public class TriagemService {
 
     /**
      * Posição na fila começando em 1, ou -1 se o paciente não existe ou já foi chamado.
-     * Custo O(n log n) no heap, porque depende da listagem ordenada.
+     * Custo de listarEmOrdem() + O(n): O(n log n) no heap, O(n) na árvore e na lista.
      */
     public int posicaoNaFila(int codigo) {
         Paciente paciente = pacientesPorCodigo.get(codigo);
@@ -106,9 +109,11 @@ public class TriagemService {
         // Valida antes de mexer na fila, para um nível inválido não deixar o paciente fora dela.
         Prioridade prioridade = Prioridade.porNivel(novaPrioridade);
 
-        fila.remove(paciente);
+        // Remover ANTES de mudar a prioridade: com o paciente ainda dentro do TreeSet
+        // ou da lista ordenada, a mudança deixaria a estrutura fora de ordem.
+        fila.remover(paciente);
         paciente.setPrioridade(prioridade);
-        fila.add(paciente);
+        fila.inserir(paciente);
 
         return true;
     }
@@ -118,20 +123,10 @@ public class TriagemService {
     }
 
     public List<Paciente> listarFilaOrdenada() {
-        PriorityQueue<Paciente> copia =
-                new PriorityQueue<>(new PacienteComparator());
-        copia.addAll(fila);
-
-        List<Paciente> ordenados = new ArrayList<>();
-
-        while (!copia.isEmpty()) {
-            ordenados.add(copia.poll());
-        }
-
-        return ordenados;
+        return fila.listarEmOrdem();
     }
 
     public int quantidadeAguardando() {
-        return fila.size();
+        return fila.tamanho();
     }
 }
