@@ -1,5 +1,6 @@
 package br.com.triagem;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -62,6 +63,19 @@ public class Paciente {
 
     public void setPrioridade(Prioridade prioridade) {
         this.prioridade = prioridade;
+    }
+
+    public void iniciarAtendimento(LocalDateTime horario) {
+        this.status = StatusPaciente.EM_ATENDIMENTO;
+        this.horarioAtendimento = horario;
+    }
+
+    public Duration getTempoEspera() {
+        if (status == StatusPaciente.AGUARDANDO) {
+            throw new IllegalStateException("O paciente " + getCodigoFormatado() + " ainda não foi atendido.");
+        }
+
+        return Duration.between(horarioChegada, horarioAtendimento);
     }
 
     @Override
