@@ -82,3 +82,42 @@ leva alguns minutos.
 O resultado é impresso na tela e gravado em `resultados/benchmark.csv`.
 A lista ordenada não é medida com 1.000.000 de pacientes: a inserção O(n) por paciente
 tornaria o teste lento demais (O(n²) no total).
+
+## Pendências
+
+Pontos levantados na revisão do código que ainda não foram resolvidos.
+
+### Regra de negócio
+
+- [ ] **Desempate depende do relógio.** O `PacienteComparator` compara o horário de chegada antes da
+  ordem de cadastro. Se o relógio do computador voltar no tempo (ajuste manual ou sincronização),
+  um paciente cadastrado depois pode passar à frente de outro da mesma cor. Comparar só prioridade e
+  depois `ordemChegada` evita isso e dá a mesma ordem com o relógio normal.
+
+### Testes de desempenho
+
+- [ ] **Falta o cenário "pacientes chegando aleatoriamente"**, citado na seção 6 do documento. Hoje os
+  pacientes entram sempre em ordem de chegada, o que favorece a lista ordenada quando todos têm a
+  mesma cor (a inserção vira praticamente um "adicionar no fim").
+- [ ] **Lista ordenada: chamar o próximo custa O(n)** porque usa `remove(0)`. Guardar a lista em ordem
+  decrescente e remover do fim deixaria essa operação em O(1). Se ficar como está, explicar no
+  relatório que a lentidão na remoção vem dessa escolha.
+- [ ] **Tempo de consulta pouco confiável.** O laço de 1.000 consultas mede principalmente a escrita na
+  variável `sumidouro`, não o `consultarPrimeiro`. Acumular numa variável local e gravar uma vez só
+  no fim.
+- [ ] **"Pacientes por segundo" mistura operações de pesos diferentes:** `n` inserções e remoções com um
+  número fixo de alterações (`min(1000, n)`). Deixar claro no relatório ou medir separadamente.
+- [ ] **CSV no Excel em português:** o arquivo usa vírgula como separador e UTF-8 sem BOM, então abre
+  numa coluna só. Por enquanto, importar por Dados → De Texto/CSV.
+
+### Menu do terminal
+
+- [ ] A busca só aceita o número (`25`), não o código como é exibido (`P025`).
+- [ ] Chamar/buscar não mostra o horário de início do atendimento (spec 4.8: chegada, atendimento e
+  tempo de espera).
+- [ ] Alterar prioridade não mostra a prioridade atual antes da nova (spec 4.5).
+
+### Fora do backend
+
+- [ ] Ligar o backend ao site (API HTTP). O site tem duas filas (triagem por ordem de chegada e
+  consulta por prioridade) e o backend tem uma; o grupo precisa decidir como unir os dois.
