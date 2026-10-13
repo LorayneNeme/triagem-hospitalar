@@ -14,6 +14,8 @@ public class TriagemService {
 
     private final Map<Integer, Paciente> pacientesPorCodigo = new HashMap<>();
 
+    private final List<Paciente> atendidos = new ArrayList<>();
+
     private final Supplier<LocalDateTime> relogio;
 
     private long proximaOrdem = 0;
@@ -67,28 +69,52 @@ public class TriagemService {
         Paciente paciente = fila.poll();
 
         if (paciente != null) {
-            pacientesPorCodigo.remove(paciente.getCodigo());
+            // Continua no HashMap: a busca e as estatísticas precisam de quem já foi atendido.
+            paciente.iniciarAtendimento(relogio.get());
+            atendidos.add(paciente);
         }
 
         return paciente;
     }
 
+    /** Encontra pacientes aguardando e também os que já foram chamados. */
     public Paciente buscarPaciente(int codigo) {
         return pacientesPorCodigo.get(codigo);
+    }
+
+    /**
+     * Posição na fila começando em 1, ou -1 se o paciente não existe ou já foi chamado.
+     * Custo O(n log n) no heap, porque depende da listagem ordenada.
+     */
+    public int posicaoNaFila(int codigo) {
+        Paciente paciente = pacientesPorCodigo.get(codigo);
+
+        if (paciente == null || paciente.getStatus() != StatusPaciente.AGUARDANDO) {
+            return -1;
+        }
+
+        return listarFilaOrdenada().indexOf(paciente) + 1;
     }
 
     public boolean alterarPrioridade(int codigo, int novaPrioridade) {
         Paciente paciente = pacientesPorCodigo.get(codigo);
 
-        if (paciente == null) {
+        if (paciente == null || paciente.getStatus() != StatusPaciente.AGUARDANDO) {
             return false;
         }
 
+        // Valida antes de mexer na fila, para um nível inválido não deixar o paciente fora dela.
+        Prioridade prioridade = Prioridade.porNivel(novaPrioridade);
+
         fila.remove(paciente);
-        paciente.setPrioridade(Prioridade.porNivel(novaPrioridade));
+        paciente.setPrioridade(prioridade);
         fila.add(paciente);
 
         return true;
+    }
+
+    public List<Paciente> listarAtendidos() {
+        return new ArrayList<>(atendidos);
     }
 
     public List<Paciente> listarFilaOrdenada() {
