@@ -23,6 +23,23 @@ class BenchmarkTest {
     }
 
     @Test
+    void medianaDeQuantidadeImparEPar() {
+        assertEquals(3.0, Benchmark.mediana(new double[]{5, 1, 3}));
+        assertEquals(2.5, Benchmark.mediana(new double[]{4, 1, 3, 2}));
+        assertEquals(7.0, Benchmark.mediana(new double[]{7}));
+    }
+
+    @Test
+    void medirMedianaRepeteComFilasNovasEUsaAMediana() {
+        Benchmark.Resultado r = Benchmark.medirMediana(FilaArvore::new, Cenario.MAIORIA_AZUL, 300, 42L, 3);
+        assertEquals(300, r.n());
+        assertEquals(Cenario.MAIORIA_AZUL, r.cenario());
+        assertEquals("Árvore (TreeSet)", r.estrutura());
+        assertTrue(r.insercaoMs() >= 0 && r.remocaoMs() >= 0 && r.alteracaoMs() >= 0);
+        assertTrue(r.pacientesPorSegundo() > 0);
+    }
+
+    @Test
     void cenarioMaioriaAzulFicaPertoDe70PorCento() {
         Random r = new Random(42);
         long azuis = IntStream.range(0, 10_000)

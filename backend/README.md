@@ -71,8 +71,13 @@ e pacientes processados por segundo.
 
 ```bash
 mvnw.cmd -q compile
-java -cp target/classes br.com.triagem.Benchmark
+java -Xms2g -Xmx2g -cp target/classes br.com.triagem.Benchmark
 ```
+
+Cada combinação é medida 5 vezes (com `System.gc()` antes de cada uma) e o resultado usa a
+**mediana**, para que uma pausa do coletor de lixo não distorça a curva. A memória fixa
+(`-Xms2g -Xmx2g`) evita que a JVM redimensione o heap no meio da medição. A execução completa
+leva alguns minutos.
 
 O resultado é impresso na tela e gravado em `resultados/benchmark.csv`.
 A lista ordenada não é medida com 1.000.000 de pacientes: a inserção O(n) por paciente
