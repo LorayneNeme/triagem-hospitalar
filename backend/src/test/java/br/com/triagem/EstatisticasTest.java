@@ -18,7 +18,8 @@ class EstatisticasTest {
 
         EstatisticasFila e = s.gerarEstatisticas();
         assertEquals(0, e.total());
-        assertEquals(0, e.aguardando());
+        assertEquals(0, e.aguardandoTriagem());
+        assertEquals(0, e.aguardandoAtendimento());
         assertEquals(0, e.atendidos());
         assertEquals(Duration.ZERO, e.tempoMedioEspera());
         assertEquals(Duration.ZERO, e.maiorTempoEspera());
@@ -30,20 +31,22 @@ class EstatisticasTest {
     void calculaMediaEMaiorEspera() {
         RelogioFalso r = new RelogioFalso(LocalDateTime.of(2026, 10, 13, 13, 20));
         TriagemService s = new TriagemService(r);
-        s.cadastrarPaciente(1, "A", 30, 1);
-        s.cadastrarPaciente(2, "B", 30, 3);
-        s.cadastrarPaciente(3, "C", 30, 3);
+        for (int nivel : new int[]{1, 3, 3}) {
+            s.classificar(s.cadastrarPaciente("Paciente", 30).getCodigo(), nivel);
+        }
+        s.cadastrarPaciente("Ainda na triagem", 30);
         r.avancar(Duration.ofMinutes(45));
-        s.chamarProximo(); // A esperou 45 min
+        s.chamarProximo(); // esperou 45 min
         r.avancar(Duration.ofMinutes(15));
-        s.chamarProximo(); // B esperou 60 min
+        s.chamarProximo(); // esperou 60 min
 
         EstatisticasFila e = s.gerarEstatisticas();
-        assertEquals(3, e.total());
-        assertEquals(1, e.aguardando());
+        assertEquals(4, e.total());
+        assertEquals(1, e.aguardandoTriagem());
+        assertEquals(1, e.aguardandoAtendimento());
         assertEquals(2, e.atendidos());
         assertEquals(1, e.porCor().get(Prioridade.VERMELHO));
-        assertEquals(2, e.porCor().get(Prioridade.AMARELO));
+        assertEquals(2, e.porCor().get(Prioridade.AMARELO)); // quem ainda está na triagem não tem cor
         assertEquals(0, e.porCor().get(Prioridade.AZUL));
         assertEquals(Duration.ofMinutes(52).plusSeconds(30), e.tempoMedioEspera());
         assertEquals(Duration.ofMinutes(60), e.maiorTempoEspera());

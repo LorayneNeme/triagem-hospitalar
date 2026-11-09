@@ -1,6 +1,8 @@
 package br.com.triagem;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -8,6 +10,7 @@ import java.util.Scanner;
 public class Main {
     private static final Scanner scanner = new Scanner(System.in);
     private static final TriagemService triagem = new TriagemService();
+    private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
 
     public static void main(String[] args) {
         int opcao;
@@ -19,16 +22,18 @@ public class Main {
             try {
                 switch (opcao) {
                     case 1 -> cadastrar();
-                    case 2 -> consultarProximo();
-                    case 3 -> chamarProximo();
-                    case 4 -> buscar();
-                    case 5 -> alterarPrioridade();
-                    case 6 -> listarFila();
-                    case 7 -> mostrarEstatisticas();
+                    case 2 -> listarFilaTriagem();
+                    case 3 -> classificar();
+                    case 4 -> consultarProximo();
+                    case 5 -> chamarProximo();
+                    case 6 -> buscar();
+                    case 7 -> alterarPrioridade();
+                    case 8 -> listarFila();
+                    case 9 -> mostrarEstatisticas();
                     case 0 -> System.out.println("Sistema encerrado.");
                     default -> System.out.println("Opção inválida.");
                 }
-            } catch (IllegalArgumentException e) {
+            } catch (IllegalArgumentException | IllegalStateException e) {
                 System.out.println("Erro: " + e.getMessage());
             }
 
@@ -40,32 +45,78 @@ public class Main {
         System.out.println("======================================");
         System.out.println("     SISTEMA DE TRIAGEM HOSPITALAR");
         System.out.println("======================================");
+        System.out.println("--- Recepção e triagem ---");
         System.out.println("1 - Cadastrar paciente");
-        System.out.println("2 - Consultar próximo paciente");
-        System.out.println("3 - Chamar próximo paciente");
-        System.out.println("4 - Buscar paciente por código");
-        System.out.println("5 - Alterar prioridade");
-        System.out.println("6 - Consultar fila");
-        System.out.println("7 - Estatísticas");
+        System.out.println("2 - Consultar fila de triagem");
+        System.out.println("3 - Classificar paciente (triagem)");
+        System.out.println("--- Atendimento ---");
+        System.out.println("4 - Consultar próximo paciente");
+        System.out.println("5 - Chamar próximo paciente");
+        System.out.println("6 - Buscar paciente por código");
+        System.out.println("7 - Alterar prioridade");
+        System.out.println("8 - Consultar fila de atendimento");
+        System.out.println("9 - Estatísticas");
         System.out.println("0 - Sair");
     }
 
     private static void cadastrar() {
-        int codigo = lerInteiro("Código: ");
-        System.out.print("Nome: ");
-        String nome = scanner.nextLine();
+        String nome = lerTexto("Nome: ");
         int idade = lerInteiro("Idade: ");
+        String telefone = lerTexto("Telefone (opcional): ");
+        String endereco = lerTexto("Endereço (opcional): ");
+        String queixa = lerTexto("Queixa principal (opcional): ");
+
+        Paciente paciente = triagem.cadastrarPaciente(nome, idade, telefone, endereco, queixa);
+        System.out.println("Paciente cadastrado: " + paciente.getCodigoFormatado() + " - " + paciente.getNome());
+        System.out.println("Status: " + paciente.getStatus().getDescricao()
+                + " (posição " + triagem.posicaoNaFilaTriagem(paciente.getCodigo()) + " na triagem)");
+    }
+
+    private static void listarFilaTriagem() {
+        List<Paciente> pacientes = triagem.listarFilaTriagem();
+
+        if (pacientes.isEmpty()) {
+            System.out.println("Ninguém aguardando triagem.");
+            return;
+        }
+
+        System.out.println("--- FILA DE TRIAGEM (ordem de chegada) ---");
+        int posicao = 1;
+        for (Paciente paciente : pacientes) {
+            System.out.println(posicao++ + ". " + paciente.getCodigoFormatado() + " - " + paciente.getNome()
+                    + " | chegada " + hora(paciente.getHorarioChegada())
+                    + (paciente.getQueixa().isEmpty() ? "" : " | " + paciente.getQueixa()));
+        }
+    }
+
+    private static void classificar() {
+        Paciente proximo = triagem.consultarProximoTriagem();
+
+        if (proximo == null) {
+            System.out.println("Ninguém aguardando triagem.");
+            return;
+        }
+
+        System.out.println("Próximo da triagem: " + proximo.getCodigoFormatado() + " - " + proximo.getNome());
+        String entrada = lerTexto("Código do paciente (Enter para o próximo): ");
+        int codigo = entrada.isEmpty() ? proximo.getCodigo() : Paciente.lerCodigo(entrada);
+
         mostrarPrioridades();
         int prioridade = lerInteiro("Prioridade (1 a 5): ");
+        String especialidade = lerTexto("Especialidade (opcional): ");
+        String sala = lerTexto("Sala (opcional): ");
+        String observacao = lerTexto("Observação (opcional): ");
 
-        Paciente paciente = triagem.cadastrarPaciente(codigo, nome, idade, prioridade);
-        System.out.println("Paciente cadastrado: " + paciente);
+        Paciente paciente = triagem.classificar(codigo, prioridade, especialidade, sala, observacao);
+        System.out.println(paciente.getCodigoFormatado() + " classificado como "
+                + paciente.getPrioridade().getDescricao() + ". Posição na fila de atendimento: "
+                + triagem.posicaoNaFila(codigo));
     }
 
     private static void consultarProximo() {
         Paciente paciente = triagem.consultarProximo();
         System.out.println(paciente == null
-                ? "Não há pacientes aguardando."
+                ? "Não há pacientes aguardando atendimento."
                 : "Próximo paciente: " + paciente);
     }
 
@@ -73,20 +124,20 @@ public class Main {
         Paciente paciente = triagem.chamarProximo();
 
         if (paciente == null) {
-            System.out.println("Não há pacientes aguardando.");
+            System.out.println("Não há pacientes aguardando atendimento.");
             return;
         }
 
         System.out.println("Próximo paciente:");
         System.out.println(paciente.getCodigoFormatado() + " - " + paciente.getNome());
         System.out.println("Prioridade: " + paciente.getPrioridade().getDescricao());
-        System.out.println("Status: " + StatusPaciente.AGUARDANDO.getDescricao()
+        System.out.println("Status: " + StatusPaciente.AGUARDANDO_ATENDIMENTO.getDescricao()
                 + " → " + paciente.getStatus().getDescricao());
-        System.out.println("Tempo de espera: " + formatarMinutos(paciente.getTempoEspera()));
+        mostrarHorarios(paciente);
     }
 
     private static void buscar() {
-        int codigo = lerInteiro("Código do paciente: ");
+        int codigo = lerCodigo("Código do paciente (ex.: P025): ");
         Paciente paciente = triagem.buscarPaciente(codigo);
 
         if (paciente == null) {
@@ -95,33 +146,54 @@ public class Main {
         }
 
         System.out.println("Paciente: " + paciente.getCodigoFormatado() + " - " + paciente.getNome());
-        System.out.println("Prioridade: " + paciente.getPrioridade().getDescricao());
-
-        if (paciente.getStatus() == StatusPaciente.AGUARDANDO) {
-            System.out.println("Posição na fila: " + triagem.posicaoNaFila(codigo));
-        } else {
-            System.out.println("Tempo de espera: " + formatarMinutos(paciente.getTempoEspera()));
-        }
-
         System.out.println("Status: " + paciente.getStatus().getDescricao());
+
+        switch (paciente.getStatus()) {
+            case AGUARDANDO_TRIAGEM -> {
+                int posicao = triagem.posicaoNaFilaTriagem(codigo);
+                System.out.println(posicao > 0 ? "Posição na fila de triagem: " + posicao : "Em triagem agora.");
+                System.out.println("Chegada: " + hora(paciente.getHorarioChegada()));
+            }
+            case AGUARDANDO_ATENDIMENTO -> {
+                System.out.println("Prioridade: " + paciente.getPrioridade().getDescricao());
+                System.out.println("Posição na fila: " + triagem.posicaoNaFila(codigo));
+                System.out.println("Chegada: " + hora(paciente.getHorarioChegada()));
+            }
+            case EM_ATENDIMENTO -> {
+                System.out.println("Prioridade: " + paciente.getPrioridade().getDescricao());
+                mostrarHorarios(paciente);
+            }
+        }
     }
 
     private static void alterarPrioridade() {
-        int codigo = lerInteiro("Código do paciente: ");
-        mostrarPrioridades();
-        int prioridade = lerInteiro("Nova prioridade (1 a 5): ");
+        int codigo = lerCodigo("Código do paciente (ex.: P025): ");
+        Paciente paciente = triagem.buscarPaciente(codigo);
 
-        boolean alterado = triagem.alterarPrioridade(codigo, prioridade);
-        System.out.println(alterado
-                ? "Prioridade alterada com sucesso."
-                : "Paciente não encontrado ou já chamado para atendimento.");
+        if (paciente == null || paciente.getStatus() != StatusPaciente.AGUARDANDO_ATENDIMENTO) {
+            System.out.println(paciente == null
+                    ? "Paciente não encontrado."
+                    : "Só dá para alterar quem está na fila de atendimento (status: "
+                    + paciente.getStatus().getDescricao() + ").");
+            return;
+        }
+
+        Prioridade anterior = paciente.getPrioridade();
+        System.out.println("Paciente: " + paciente.getCodigoFormatado() + " - " + paciente.getNome());
+        System.out.println("Prioridade atual: " + anterior.getNivel() + " - " + anterior.getDescricao());
+        mostrarPrioridades();
+        int nova = lerInteiro("Nova prioridade (1 a 5): ");
+
+        triagem.alterarPrioridade(codigo, nova);
+        System.out.println("Prioridade alterada: " + anterior.getDescricao() + " → "
+                + paciente.getPrioridade().getDescricao() + ". Nova posição: " + triagem.posicaoNaFila(codigo));
     }
 
     private static void listarFila() {
         List<Paciente> pacientes = triagem.listarFilaOrdenada();
 
         if (pacientes.isEmpty()) {
-            System.out.println("Fila vazia.");
+            System.out.println("Fila de atendimento vazia.");
             return;
         }
 
@@ -138,8 +210,10 @@ public class Main {
 
         System.out.println("--- ESTATÍSTICAS ---");
         System.out.println("Total de pacientes: " + estatisticas.total());
-        System.out.println("Aguardando: " + estatisticas.aguardando());
+        System.out.println("Aguardando triagem: " + estatisticas.aguardandoTriagem());
+        System.out.println("Aguardando atendimento: " + estatisticas.aguardandoAtendimento());
         System.out.println("Atendidos: " + estatisticas.atendidos());
+        System.out.println("Classificados por cor:");
 
         for (Map.Entry<Prioridade, Integer> cor : estatisticas.porCor().entrySet()) {
             System.out.println("  " + cor.getKey().getDescricao() + ": " + cor.getValue());
@@ -147,6 +221,17 @@ public class Main {
 
         System.out.println("Tempo médio de espera: " + formatarMinutos(estatisticas.tempoMedioEspera()));
         System.out.println("Maior tempo de espera: " + formatarMinutos(estatisticas.maiorTempoEspera()));
+    }
+
+    /** Spec 4.8: chegada, início do atendimento e tempo de espera. */
+    private static void mostrarHorarios(Paciente paciente) {
+        System.out.println("Chegada: " + hora(paciente.getHorarioChegada()));
+        System.out.println("Atendimento: " + hora(paciente.getHorarioAtendimento()));
+        System.out.println("Tempo de espera: " + formatarMinutos(paciente.getTempoEspera()));
+    }
+
+    private static String hora(LocalDateTime horario) {
+        return horario.format(HORA);
     }
 
     private static String formatarMinutos(Duration duracao) {
@@ -161,13 +246,26 @@ public class Main {
         System.out.println("5 - Azul (menor prioridade)");
     }
 
+    private static String lerTexto(String mensagem) {
+        System.out.print(mensagem);
+        return scanner.nextLine().trim();
+    }
+
+    /** Aceita "P025", "p25" ou "25". */
+    private static int lerCodigo(String mensagem) {
+        while (true) {
+            try {
+                return Paciente.lerCodigo(lerTexto(mensagem));
+            } catch (IllegalArgumentException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+
     private static int lerInteiro(String mensagem) {
         while (true) {
-            System.out.print(mensagem);
-            String entrada = scanner.nextLine();
-
             try {
-                return Integer.parseInt(entrada.trim());
+                return Integer.parseInt(lerTexto(mensagem));
             } catch (NumberFormatException e) {
                 System.out.println("Digite um número inteiro válido.");
             }
