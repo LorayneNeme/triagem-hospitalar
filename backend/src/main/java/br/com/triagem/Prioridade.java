@@ -29,4 +29,23 @@ public enum Prioridade {
         }
         throw new IllegalArgumentException("Prioridade deve estar entre 1 e 5.");
     }
+
+    /** Aceita o nível ("1") ou o nome da cor ("Vermelho", sem diferenciar maiúsculas), como o site envia. */
+    public static Prioridade ler(String texto) {
+        if (texto == null || texto.isBlank()) {
+            throw new IllegalArgumentException("Informe a prioridade (1 a 5 ou o nome da cor).");
+        }
+
+        String valor = texto.trim();
+
+        for (Prioridade prioridade : values()) {
+            if (prioridade.descricao.equalsIgnoreCase(valor)) return prioridade;
+        }
+
+        try {
+            return porNivel(Integer.parseInt(valor));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Prioridade inválida: " + valor + ".");
+        }
+    }
 }
