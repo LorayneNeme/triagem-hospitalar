@@ -2,25 +2,33 @@ package br.com.triagem;
 
 import java.util.Random;
 
-/** Distribuições de prioridade usadas no benchmark (spec, seção 6). */
+/** Cenários do benchmark (spec, seção 6). */
 public enum Cenario {
-    EQUILIBRADO(null),
-    MAIORIA_AZUL(Prioridade.AZUL),
-    MAIORIA_VERMELHO(Prioridade.VERMELHO),
-    MESMA_PRIORIDADE(Prioridade.AMARELO);
+    EQUILIBRADO(null, false),
+    MAIORIA_AZUL(Prioridade.AZUL, false),
+    MAIORIA_VERMELHO(Prioridade.VERMELHO, false),
+    MESMA_PRIORIDADE(Prioridade.AMARELO, false),
+    /** Cores como no EQUILIBRADO, mas os pacientes entram na fila em ordem embaralhada. */
+    CHEGADA_ALEATORIA(null, true);
 
     private static final double CHANCE_DA_MAIORIA = 0.70;
 
     private final Prioridade predominante;
+    private final boolean embaralhaChegada;
 
-    Cenario(Prioridade predominante) {
+    Cenario(Prioridade predominante, boolean embaralhaChegada) {
         this.predominante = predominante;
+        this.embaralhaChegada = embaralhaChegada;
+    }
+
+    public boolean embaralhaChegada() {
+        return embaralhaChegada;
     }
 
     public Prioridade sortear(Random random) {
         Prioridade[] cores = Prioridade.values();
 
-        if (this == EQUILIBRADO) {
+        if (predominante == null) {
             return cores[random.nextInt(cores.length)];
         }
 

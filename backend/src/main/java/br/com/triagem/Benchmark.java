@@ -14,23 +14,33 @@ import java.util.function.Supplier;
 
 /**
  * Mede as três estruturas de FilaAtendimento com 100 a 1.000.000 de pacientes
- * em quatro cenários e grava o resultado em resultados/benchmark.csv.
+ * nos cinco cenários e grava o resultado em resultados/benchmark.csv.
  * Cada combinação é medida 5 vezes e o CSV guarda a mediana.
  *
  * Executar: java -Xms2g -Xmx2g -cp target/classes br.com.triagem.Benchmark
  */
 public class Benchmark {
 
+    /**
+     * @param insercaoMs          inserir os n pacientes
+     * @param consultaNs          uma consulta do próximo (média de 1.000)
+     * @param remocaoMs           chamar os n pacientes até esvaziar a fila
+     * @param cicloMs             inserção + remoção: o caminho completo de n pacientes pela fila
+     * @param pacientesPorSegundo n / cicloMs — quantos pacientes a estrutura consegue receber e chamar por segundo
+     * @param alteracoes          quantas alterações de prioridade foram medidas: min(1.000, n)
+     * @param alteracaoUsPorOp    custo médio de UMA alteração (remover, mudar a cor, reinserir), em microssegundos
+     */
     public record Resultado(
             String estrutura,
             Cenario cenario,
             int n,
             double insercaoMs,
             double consultaNs,
-            double alteracaoMs,
             double remocaoMs,
-            double totalMs,
-            double pacientesPorSegundo) {
+            double cicloMs,
+            double pacientesPorSegundo,
+            int alteracoes,
+            double alteracaoUsPorOp) {
     }
 
     private static final int[] TAMANHOS = {100, 1_000, 10_000, 100_000, 1_000_000};
@@ -41,19 +51,42 @@ public class Benchmark {
     private static final int REPETICOES = 5;
     private static final LocalDateTime INICIO = LocalDateTime.of(2026, 10, 13, 8, 0);
     private static final Path ARQUIVO_CSV = Path.of("resultados", "benchmark.csv");
+    private static final Locale PT_BR = Locale.forLanguageTag("pt-BR");
+    private static final String CABECALHO_CSV = "estrutura;cenario;n;insercao_ms;consulta_ns;remocao_ms;ciclo_ms;"
+            + "pacientes_por_segundo;alteracoes;alteracao_us_por_op";
 
     /** Impede a JIT de descartar as consultas por não usarem o resultado. */
     private static volatile int sumidouro;
 
-    public static Resultado medir(FilaAtendimento fila, Cenario cenario, int n, long semente) {
-        Random random = new Random(semente);
-
-        // 1. Pacientes gerados antes de cronometrar.
+    /**
+     * Pacientes já classificados, com ordemChegada 0..n-1. No cenário CHEGADA_ALEATORIA o vetor
+     * é embaralhado: cada um mantém a sua ordem de chegada, mas eles entram na fila fora de ordem.
+     */
+    static Paciente[] gerarPacientes(Cenario cenario, int n, Random random) {
         Paciente[] pacientes = new Paciente[n];
         for (int i = 0; i < n; i++) {
             pacientes[i] = new Paciente(i + 1, "Paciente " + (i + 1), 30,
                     cenario.sortear(random), INICIO.plusSeconds(i), i);
         }
+
+        if (cenario.embaralhaChegada()) {
+            // Fisher–Yates com o mesmo Random, para o resultado ser reproduzível.
+            for (int i = n - 1; i > 0; i--) {
+                int j = random.nextInt(i + 1);
+                Paciente troca = pacientes[i];
+                pacientes[i] = pacientes[j];
+                pacientes[j] = troca;
+            }
+        }
+
+        return pacientes;
+    }
+
+    public static Resultado medir(FilaAtendimento fila, Cenario cenario, int n, long semente) {
+        Random random = new Random(semente);
+
+        // 1. Pacientes gerados antes de cronometrar.
+        Paciente[] pacientes = gerarPacientes(cenario, n, random);
 
         // 2. Inserção.
         long inicio = System.nanoTime();
@@ -62,12 +95,15 @@ public class Benchmark {
         }
         long insercao = System.nanoTime() - inicio;
 
-        // 3. Consulta do próximo.
+        // 3. Consulta do próximo. Soma numa variável local e grava no campo volatile uma vez só:
+        //    escrever no volatile a cada volta custaria mais que a própria consulta.
+        int soma = 0;
         inicio = System.nanoTime();
         for (int i = 0; i < CONSULTAS; i++) {
-            sumidouro += fila.consultarPrimeiro().getCodigo();
+            soma += fila.consultarPrimeiro().getCodigo();
         }
         double consultaNs = (System.nanoTime() - inicio) / (double) CONSULTAS;
+        sumidouro = soma;
 
         // 4. Alteração de prioridade: remover, mudar e reinserir.
         int alteracoes = Math.min(MAX_ALTERACOES, n);
@@ -87,14 +123,15 @@ public class Benchmark {
         }
         long remocao = System.nanoTime() - inicio;
 
-        double insercaoMs = insercao / 1e6;
-        double alteracaoMs = alteracao / 1e6;
-        double remocaoMs = remocao / 1e6;
-        double totalMs = insercaoMs + alteracaoMs + remocaoMs;
-        double pacientesPorSegundo = n / (totalMs / 1000.0);
+        return montar(fila.nome(), cenario, n, insercao / 1e6, consultaNs, remocao / 1e6,
+                alteracoes, alteracao / 1e3 / alteracoes);
+    }
 
-        return new Resultado(fila.nome(), cenario, n, insercaoMs, consultaNs,
-                alteracaoMs, remocaoMs, totalMs, pacientesPorSegundo);
+    private static Resultado montar(String estrutura, Cenario cenario, int n, double insercaoMs, double consultaNs,
+                                    double remocaoMs, int alteracoes, double alteracaoUsPorOp) {
+        double cicloMs = insercaoMs + remocaoMs;
+        return new Resultado(estrutura, cenario, n, insercaoMs, consultaNs, remocaoMs, cicloMs,
+                n / (cicloMs / 1000.0), alteracoes, alteracaoUsPorOp);
     }
 
     /**
@@ -105,27 +142,24 @@ public class Benchmark {
                                          long semente, int repeticoes) {
         double[] insercao = new double[repeticoes];
         double[] consulta = new double[repeticoes];
-        double[] alteracao = new double[repeticoes];
         double[] remocao = new double[repeticoes];
+        double[] alteracao = new double[repeticoes];
         String nome = null;
+        int alteracoes = 0;
 
         for (int i = 0; i < repeticoes; i++) {
             System.gc(); // começa cada repetição sem o lixo da anterior
             Resultado r = medir(estrutura.get(), cenario, n, semente);
             nome = r.estrutura();
+            alteracoes = r.alteracoes();
             insercao[i] = r.insercaoMs();
             consulta[i] = r.consultaNs();
-            alteracao[i] = r.alteracaoMs();
             remocao[i] = r.remocaoMs();
+            alteracao[i] = r.alteracaoUsPorOp();
         }
 
-        double insercaoMs = mediana(insercao);
-        double alteracaoMs = mediana(alteracao);
-        double remocaoMs = mediana(remocao);
-        double totalMs = insercaoMs + alteracaoMs + remocaoMs;
-
-        return new Resultado(nome, cenario, n, insercaoMs, mediana(consulta),
-                alteracaoMs, remocaoMs, totalMs, n / (totalMs / 1000.0));
+        return montar(nome, cenario, n, mediana(insercao), mediana(consulta), mediana(remocao),
+                alteracoes, mediana(alteracao));
     }
 
     static double mediana(double[] valores) {
@@ -138,6 +172,23 @@ public class Benchmark {
                 : (ordenados[meio - 1] + ordenados[meio]) / 2;
     }
 
+    /** CSV para o Excel em português: BOM UTF-8, ';' como separador e vírgula decimal. */
+    static void gravarCsv(Path arquivo, List<Resultado> resultados) throws IOException {
+        List<String> linhas = new ArrayList<>();
+        linhas.add("﻿" + CABECALHO_CSV);
+
+        for (Resultado r : resultados) {
+            linhas.add(String.format(PT_BR, "%s;%s;%d;%.4f;%.2f;%.4f;%.4f;%.1f;%d;%.4f",
+                    r.estrutura(), r.cenario(), r.n(), r.insercaoMs(), r.consultaNs(), r.remocaoMs(),
+                    r.cicloMs(), r.pacientesPorSegundo(), r.alteracoes(), r.alteracaoUsPorOp()));
+        }
+
+        if (arquivo.getParent() != null) {
+            Files.createDirectories(arquivo.getParent());
+        }
+        Files.write(arquivo, linhas, StandardCharsets.UTF_8);
+    }
+
     public static void main(String[] args) throws IOException {
         List<Supplier<FilaAtendimento>> estruturas = List.of(FilaHeap::new, FilaArvore::new, FilaListaOrdenada::new);
 
@@ -146,12 +197,11 @@ public class Benchmark {
             medir(estrutura.get(), Cenario.EQUILIBRADO, 10_000, 1L);
         }
 
-        List<String> linhasCsv = new ArrayList<>();
-        linhasCsv.add("estrutura,cenario,n,insercao_ms,consulta_ns,alteracao_ms,remocao_ms,total_ms,pacientes_por_segundo");
+        List<Resultado> resultados = new ArrayList<>();
 
-        System.out.printf("%-28s %-17s %10s %12s %12s %13s %12s %12s %16s%n",
+        System.out.printf("%-28s %-17s %10s %12s %12s %12s %12s %16s %14s%n",
                 "Estrutura", "Cenário", "Pacientes", "Inserção ms", "Consulta ns",
-                "Alteração ms", "Remoção ms", "Total ms", "Pacientes/s");
+                "Remoção ms", "Ciclo ms", "Pacientes/s", "Alteração µs");
 
         for (int n : TAMANHOS) {
             for (Cenario cenario : Cenario.values()) {
@@ -164,20 +214,16 @@ public class Benchmark {
                     }
 
                     Resultado r = medirMediana(estrutura, cenario, n, SEMENTE, REPETICOES);
+                    resultados.add(r);
 
-                    System.out.printf(Locale.ROOT, "%-28s %-17s %10d %12.2f %12.1f %13.2f %12.2f %12.2f %16.0f%n",
+                    System.out.printf(Locale.ROOT, "%-28s %-17s %10d %12.2f %12.1f %12.2f %12.2f %16.0f %14.3f%n",
                             r.estrutura(), r.cenario(), r.n(), r.insercaoMs(), r.consultaNs(),
-                            r.alteracaoMs(), r.remocaoMs(), r.totalMs(), r.pacientesPorSegundo());
-
-                    linhasCsv.add(String.format(Locale.ROOT, "%s,%s,%d,%.4f,%.2f,%.4f,%.4f,%.4f,%.1f",
-                            r.estrutura(), r.cenario(), r.n(), r.insercaoMs(), r.consultaNs(),
-                            r.alteracaoMs(), r.remocaoMs(), r.totalMs(), r.pacientesPorSegundo()));
+                            r.remocaoMs(), r.cicloMs(), r.pacientesPorSegundo(), r.alteracaoUsPorOp());
                 }
             }
         }
 
-        Files.createDirectories(ARQUIVO_CSV.getParent());
-        Files.write(ARQUIVO_CSV, linhasCsv, StandardCharsets.UTF_8);
+        gravarCsv(ARQUIVO_CSV, resultados);
         System.out.println();
         System.out.println("Resultados gravados em " + ARQUIVO_CSV.toAbsolutePath());
     }
