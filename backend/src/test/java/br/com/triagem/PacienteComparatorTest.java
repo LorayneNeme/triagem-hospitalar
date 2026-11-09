@@ -20,6 +20,15 @@ class PacienteComparatorTest {
     }
 
     @Test
+    void relogioQueVoltaNoTempoNaoMudaAOrdem() {
+        // B foi cadastrado depois de A, mas o relógio do computador foi atrasado entre os dois cadastros.
+        LocalDateTime t = LocalDateTime.of(2026, 10, 13, 10, 0);
+        Paciente a = new Paciente(1, "A", 30, Prioridade.AMARELO, t, 0);
+        Paciente b = new Paciente(2, "B", 30, Prioridade.AMARELO, t.minusMinutes(5), 1);
+        assertTrue(new PacienteComparator().compare(a, b) < 0);
+    }
+
+    @Test
     void codigoFormatadoTemTresDigitos() {
         Paciente p = new Paciente(7, "A", 30, Prioridade.AZUL, LocalDateTime.now(), 0);
         assertEquals("P007", p.getCodigoFormatado());
