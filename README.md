@@ -110,7 +110,9 @@ triagem-hospitalar/
 
 ## 👥 Equipe
 
-- Andressa
-- Carlos
-- Gustavo
-- Lorayne
+| Integrante | Parte |
+|---|---|
+| **Lorayne** | 🌐 Site |
+| **Andressa** | 🌐 Site |
+| **Carlos** | ☕ Backend Java |
+| **Gustavo** | ☕ Backend Java |
