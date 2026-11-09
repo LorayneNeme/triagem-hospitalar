@@ -289,3 +289,88 @@ Pontos levantados na revisão do código. Todos resolvidos.
 - [x] **Código do paciente.** Gerado pelo backend em sequência (`P001`, `P002`...), sem repetição.
 - [x] **Ligar os dois.** API HTTP pronta e testada (seção "API HTTP"). Falta só trocar o
   `localStorage` do `script.js` pelas chamadas `fetch`. Isso fica com quem cuida do site.
+
+## Testes manuais (2026-11-09)
+
+A API e o site foram testados localmente:
+
+- API na porta 8080: cerca de 70 requisições, com `curl` e um script Node (`fetch`).
+- Site num servidor estático (`python -m http.server 5500` na pasta `repo/`): testado no navegador, clicando nas telas e lendo o `localStorage`.
+- Uma revisão do `script.js` apontou quais casos testar.
+
+Legenda: ✅ passou · ❌ bug · ⚠️ ponto de atenção (não quebra, mas vale saber).
+
+### API: o que passou
+
+| Área | Casos testados | Resultado |
+|---|---|---|
+| Filas vazias | `GET` das filas devolve `[]`; chamar triagem, chamar atendimento e próximo devolvem 204 | ✅ |
+| Cadastro | `idade` como número ou texto (`"45"`, `" 30 "`); acentos e emoji em UTF-8; campos extras (`codigo`, `prioridade`) ignorados | ✅ |
+| Validação | nome vazio, só com espaços ou ausente; idade -1, 131, 30.7, `"abc"`, `null`, `true` ou número gigante; JSON inválido, vazio, array, `NaN` ou com lixo depois do fim → 400 com mensagem clara | ✅ |
+| Classificação | cor com maiúsculas ou espaços (`"VERMELHO"`, `" laranja "`) aceita; nível 0, 6 ou 2.5, cor `"roxo"` ou prioridade ausente → 400; classificar duas vezes → 409; código inexistente → 404 | ✅ |
+| Ordem da fila | Vermelho → Laranja → Amarelo → Verde; dois Amarelos saem na ordem de chegada | ✅ |
+| Alterar prioridade | Verde → Vermelho passa à frente do Vermelho que chegou depois; trocar pela mesma cor mantém o lugar; paciente na triagem ou já em atendimento → 409 | ✅ |
+| Busca por código | `P001`, `p1`, `1`, `001`, `P0001` e com espaços em volta → P001; `P`, `PX1`, `-1`, `0` ou `P000` → 400 | ✅ |
+| Rotas | `DELETE` e `PATCH` → 405; rota inexistente, `/api` e `/api/` → 404; barra no fim e query string aceitas | ✅ |
+| CORS | preflight `OPTIONS` → 204 com `Access-Control-Allow-Origin: *`; respostas de erro também trazem o cabeçalho | ✅ |
+| Concorrência | 200 cadastros em paralelo → 200 códigos únicos (P014 a P213), nenhum perdido | ✅ |
+
+### API: o que foi descoberto
+
+| # | Sev. | Achado | Como reproduzir |
+|---|---|---|---|
+| A1 | ❌ média | **Paciente chamado para a triagem fica "no limbo".** `chamarParaTriagem()` tira o paciente da fila, mas o status continua "Aguardando triagem". Não existe um estado "Em triagem". O paciente some de `GET /fila-triagem` e só aparece em `GET /pacientes`. Se a tela recarregar antes da classificação, ninguém mais o vê. As estatísticas deixam de bater com a fila: `aguardandoTriagem` dava 208, a fila tinha 207. | `POST /fila-triagem/chamar` e depois compare `GET /fila-triagem` com `GET /estatisticas`. |
+| A2 | ❌ baixa | **JSON muito aninhado derruba a conexão sem resposta.** O leitor é recursivo. Com cerca de 2.000 níveis, lança `StackOverflowError`. Como isso é um `Error`, não cai no `catch (RuntimeException)`. O servidor continua no ar, mas o cliente recebe "conexão fechada" em vez de 400. Com 1.000 níveis ainda responde 400. | `POST /pacientes` com `"[".repeat(2000) + "]".repeat(2000)`. |
+| A3 | ❌ baixa | **Campos de texto aceitam qualquer tipo.** `{"nome": {"a": 1}}` vira o nome `"{a=1}"` (o `toString()` do `Map`). `{"nome": 123}` vira `"123"`. O certo seria 400. | `POST /pacientes` com `{"nome":{"a":1},"idade":1}`. |
+| A4 | ⚠️ | **Sem limite de tamanho do corpo.** Um nome de 5 MB foi aceito e ficou na memória. Para uso local, não é grave. | `POST /pacientes` com nome de 5.000.000 caracteres. |
+| A5 | ⚠️ | Corpo que começa com BOM (`﻿`) → 400 "valor inesperado". Navegadores não mandam BOM; o site não é afetado. | — |
+| A6 | ⚠️ | `idade: 1e1` → 400 com a mensagem "deve ser um número inteiro: 10.0". O valor é inteiro; só a notação científica é recusada. | — |
+| A7 | ⚠️ | `OPTIONS` responde 204 até em rota inexistente. É inofensivo: o pedido real recebe 404. | — |
+
+Comportamento intencional, não é bug: dá para classificar um paciente que ainda está na fila de
+triagem sem chamá-lo antes. O motivo é que o site deixa iniciar a triagem de qualquer paciente da lista.
+
+### Site: o que foi descoberto
+
+O site não usa a API: tudo fica no `localStorage`. Os itens abaixo estão no `js/script.js` e nos HTML.
+Pela decisão do grupo, o `script.js` não foi alterado. A coluna "Confirmado" diz como cada item foi
+verificado: "navegador" = reproduzido no navegador; "código" = confirmado lendo o código.
+
+| # | Sev. | Achado | Onde | Confirmado |
+|---|---|---|---|---|
+| S1 | ❌ alta | **Um clique em "Chamar próximo" (modo consulta) chama 2 pacientes.** O botão tem dois *listeners* (funções ligadas ao clique): um no `script.js` e outro no `<script>` do próprio HTML. Cada um tira um paciente da fila. Com 2 Amarelos na fila, um clique deixou os 2 "Em atendimento", e a tela mostrou só um. `#btnTriagem`, `#btnConsulta` e `#btnRechamar` também têm listener duplicado. | `script.js:2165` e `painel-paciente.html:380` | navegador |
+| S2 | ❌ alta | **A virada do dia apaga todos os pacientes, inclusive os que aguardam.** `verificarNovoDia()` zera `pacientes` sem olhar o status. Quem chegou às 23:50 some à meia-noite. A fila de triagem desenha a lista antes da limpeza: a tela mostrou 1 paciente com o storage já zerado, e "Iniciar triagem" falha. | `script.js:1197-1200`, `:623` e `:1215` | navegador |
+| S3 | ❌ alta | **O código do paciente pode repetir.** `"A" + Math.floor(100 + Math.random()*900)` só gera 900 códigos e não confere duplicata. Com 36 pacientes, a chance de colisão já chega a cerca de 50%. Remover apaga os dois pacientes, classificar pega o primeiro e chamar pode marcar o paciente errado. | `script.js:19-20` | código |
+| S4 | ❌ média | **XSS: nome e queixa entram na página como HTML.** XSS é quando um dado digitado vira código na página. Um nome `<img src=x onerror="...">` executou JavaScript ao abrir a fila de triagem. Um `<b>` na queixa virou negrito. | `script.js:720`, `:725`, `:1377` e `:1381` (`innerHTML`) | navegador |
+| S5 | ❌ média | **A classificação pode ser confirmada de novo.** Na mesma tela, depois de confirmar Amarelo, deu para trocar para Vermelho e confirmar outra vez. Cada confirmação muda a `horarioTriagem`, e o paciente muda de lugar na fila. Também dá para voltar um paciente de "Em atendimento" para "Aguardando atendimento". | `script.js:539-567` | navegador |
+| S6 | ❌ média | **O desempate usa a hora da triagem, não a da chegada** (contraria a spec 4.3). Com a mesma cor, quem é triado primeiro passa à frente de quem chegou antes. No navegador, o S1 escondeu esse efeito, porque chamou os dois. | `script.js:2255-2262` e `painel-paciente.html:462` | código |
+| S7 | ❌ média | **A lista "Pacientes aguardando atendimento" do dashboard não segue a prioridade.** A lista fica na ordem de cadastro. Um Azul apareceu acima de um Vermelho. | `script.js:1332-1340` | navegador |
+| S8 | ❌ média | **O cadastro aceita dados inválidos.** Foram aceitos nome e queixa só com espaços e idade -5. A idade -5 entra na faixa "0-12" do gráfico e fica gravada como texto (`"-5"`). | `index.html:166-192` e `script.js:11-15` | navegador |
+| S9 | ❌ baixa | **A máscara de telefone erra no fixo.** `1123456789` virou `(11) 23456-789`. Telefone incompleto, como `(11) 1`, também passa. | `script.js:285` | navegador |
+| S10 | ❌ baixa | **`localStorage` corrompido derruba a página.** Com `pacientes = "x"`, o dashboard lança `SyntaxError` no `JSON.parse` e não carrega nada. Não há `try/catch`. | `script.js:1232` e outros `JSON.parse` | navegador |
+| S11 | ❌ baixa | **"Atendimentos do dia" conta todos os cadastrados.** Com 2 aguardando atendimento, 1 aguardando triagem e nenhum atendido, o card mostrou 3. "Total histórico" inclui o dia de hoje. | `script.js:1239` e `:2018` | navegador |
+| S12 | ⚠️ | A triagem aceita confirmar sem especialidade e sem sala. O alerta mostra "Especialidade: " vazio. | `triagem.html` | navegador |
+| S13 | ⚠️ | "Chamar próximo" no modo triagem não muda o status. Cliques seguidos chamam sempre o mesmo paciente. | `script.js:2182-2211` | código |
+| S14 | ⚠️ | O tempo de espera só atualiza ao recarregar a página (não há `setInterval`). Sem `horarioChegada`, aparece "NaNh NaNmin". | `script.js:744` e `:930-964` | código |
+| S15 | ⚠️ | O fallback do Chart.js não funciona: trocar o `src` de um `<script>` que já falhou não faz o navegador baixar de novo. A URL principal também não fixa a versão. | `dashboard.html:643-646` | código |
+| S16 | ⚠️ | "Rechamar" depois de trocar de modo anuncia um paciente de consulta como "CHAMADO PARA TRIAGEM". | `painel-paciente.html` | código |
+
+Sem problema: os links entre as páginas, os caminhos `../css/style.css` e `../js/script.js` e os
+IDs usados pelo JS. Com dados válidos, nenhuma página deu erro no console ao abrir.
+
+### O que a API já resolve
+
+Quando o site passar a usar a API, alguns bugs do site deixam de existir:
+
+- **S2:** os dados só se perdem quando o servidor é reiniciado, não na virada do dia.
+- **S3:** o código é sequencial e gerado pelo backend.
+- **S5:** classificar duas vezes devolve 409.
+- **S6:** o desempate é pela ordem de chegada.
+- **S8:** nome e idade são validados no backend.
+- **S10:** os dados saem do `localStorage`.
+
+Outros continuam valendo, porque dependem do próprio site:
+
+- **S1:** os listeners duplicados chamariam a API duas vezes.
+- **S4:** o XSS depende de como o site monta o HTML.
+- **S7**, **S9** e **S11** a **S16**.
